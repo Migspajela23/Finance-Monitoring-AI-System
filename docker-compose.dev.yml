@@ -1,0 +1,45 @@
+# docker-compose.dev.yml
+# Local development database only.
+# Production database is Supabase cloud — do NOT use this file in production.
+
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: finance_monitor_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: finance_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Auto-run migrations on first container start
+      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d finance_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # pgAdmin for local DB browsing (optional, comment out if not needed)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: finance_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@local.com
+      PGADMIN_DEFAULT_PASSWORD: devpassword
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    profiles:
+      - tools   # only starts with: docker compose --profile tools up
+
+volumes:
+  pgdata:
+    driver: local
